@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Civic Bridge</title>
+    <style>
+      * { box-sizing: border-box; }
+      
+      :root{ --ui-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, system-ui, sans-serif; }
+      body { 
+        font-family: var(--ui-font);
+        margin: 0;
+        padding: 0;
+        background: linear-gradient(135deg, #a8dafc 0%, #7cc5e8 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      #app { 
+        width: 95vw;
+        max-width: calc(100% - 40px);
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        position: relative; /* allow absolute children like floating chips */
+        height: 95vh;
+        max-height: 900px;
+      }
+      
+      #header {
+        background: linear-gradient(135deg, #4da3dd 0%, #268dbd 100%);
+        padding: 24px 32px;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      
+      #logo {
+        width: 96px;
+        height: 96px;
+        border-radius: 12px;
+        background: white;
+        padding: 10px;
+        object-fit: contain;
+      }
+      
+      #logo.fallback {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 36px;
+        color: #7cc5e8;
+        background: white;
+      }
+      
+      #header h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 600;
+      }
+      
+      #header p {
+        margin: 4px 0 0 0;
+        opacity: 0.9;
+        font-size: 14px;
+      }
+      
+      #controls {
+        padding: 16px 32px;
+        background: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      /* unify fonts for controls and make sizes cohesive */
+      #controls, #header, #inputArea, #log, .chip, button, select, input[type="text"] {
+        font-family: var(--ui-font);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      .chips-container {
+        position: absolute;
+        left: 28px; /* line up with content padding */
+        right: 28px;
+        bottom: 110px; /* float above the input area */
+        display: flex;
+        gap: 10px;
+        padding: 6px 6px;
+        overflow-x: auto;
+        background: transparent; /* make the container background invisible */
+        border-radius: 14px;
+        z-index: 40;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      /* hide scrollbar while preserving scrollability */
+      .chips-container::-webkit-scrollbar { height: 0px; }
+      .chips-container { -ms-overflow-style: none; scrollbar-width: none; }
+      .chips-container::-webkit-scrollbar { display: none; }
+
+      .chip {
+        background: white; /* floating pill */
+        border: none;
+        padding: 8px 14px;
+        border-radius: 999px;
+        white-space: nowrap;
+        cursor: pointer;
+        font-weight: 700;
+        color: #053047;
+        box-shadow: 0 8px 20px rgba(8,36,56,0.08);
+        transition: transform 0.12s ease, box-shadow 0.12s ease;
+      }
+
+      .chip:hover { transform: translateY(-6px); box-shadow: 0 18px 40px rgba(8,36,56,0.10); }
+      
+      .control-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      
+      .control-group label {
+        font-size: 14px;
+        font-weight: 500;
+        color: #495057;
+      }
+      
+      select, input[type="file"] {
+        padding: 8px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 8px;
+        font-size: 14px;
+        background: white;
+        cursor: pointer;
+      }
+      
+      select:focus, input[type="file"]:focus {
+        outline: none;
+        border-color: #7cc5e8;
+        box-shadow: 0 0 0 3px rgba(124, 197, 232, 0.1);
+      }
+      
+      #log { 
+        flex: 1;
+        padding: 24px 32px;
+        overflow-y: auto;
+        background: white;
+      }
+      
+      .message {
+        margin-bottom: 16px;
+        display: flex;
+        gap: 12px;
+        animation: slideIn 0.3s ease;
+      }
+      
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
+      .message.user {
+        flex-direction: row-reverse;
+      }
+      
+      .message-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 14px;
+        flex-shrink: 0;
+      }
+      
+      .message.user .message-avatar {
+        background: linear-gradient(135deg, #4da3dd 0%, #268dbd 100%);
+        color: white;
+      }
+      
+      .message.assistant .message-avatar {
+        background: #e9ecef;
+        color: #495057;
+      }
+      
+      .message-content {
+        background: #f8f9fa;
+        padding: 12px 16px;
+        border-radius: 12px;
+        max-width: 70%;
+        word-wrap: break-word;
+        line-height: 1.5;
+      }
+      
+      .message.user .message-content {
+        background: linear-gradient(135deg, #4da3dd 0%, #268dbd 100%);
+        color: white;
+      }
+      
+      .system-message {
+        text-align: center;
+        color: #6c757d;
+        font-size: 13px;
+        margin: 16px 0;
+        font-style: italic;
+      }
+      
+      #inputArea {
+        padding: 20px 32px 24px;
+        background: #f8f9fa;
+        border-top: 1px solid #e9ecef;
+      }
+      
+      .button-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+      }
+      
+      button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      
+      button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      }
+      
+      button:active {
+        transform: translateY(0);
+      }
+      
+      #recordBtn {
+        background: #268dbd;
+        color: white;
+      }
+      
+      #recordBtn:hover {
+        background: #268dbd;
+      }
+      
+      #recordBtn.recording {
+        background: #268dbd;
+      }
+      
+      #recordBtn.recording:hover {
+        background: #268dbd;
+      }
+      
+      #openMedicalBtn {
+        background: #268dbd;
+        color: white;
+      }
+      
+      #openMedicalBtn:hover {
+        background: #268dbd;
+      }
+      
+      #inputRow {
+        display: flex;
+        gap: 12px;
+      }
+      
+      input[type="text"] {
+        flex: 1;
+        padding: 12px 16px;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        font-size: 14px;
+        transition: border-color 0.2s;
+      }
+      
+      input[type="text"]:focus {
+        outline: none;
+        border-color: #7cc5e8;
+        box-shadow: 0 0 0 3px rgba(124, 197, 232, 0.1);
+      }
+      
+      #send {
+        background: linear-gradient(135deg, #4da3dd 0%, #268dbd 100%);
+        color: white;
+        padding: 12px 32px;
+      }
+      
+      #send:hover {
+        opacity: 0.9;
+      }
+      
+      #recordStatus {
+        color: #3328a7;
+        font-size: 13px;
+        font-weight: 500;
+      }
+      
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
+      
+      ::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+      }
+      
+::-webkit-scrollbar-thumb:hover {
+        background: #555;
+      }
+    </style>
+  </head>
+  <body>
+    
+    <div id="app">
+      <div id="header">
+        <div id="logo" class="fallback">CB</div>
+        <div>
+          <h1 id="siteTitle">Civic Bridge</h1>
+          <p id="siteSubtitle">Your public services AI agent</p>
+        </div>
+      </div>
+      
+      <div id="controls">
+        <div class="control-group">
+          <label id="langLabel" for="lang">Language:</label>
+          <select id="lang">
+            <option id="optLangAuto" value="auto">Auto-detect</option>
+            <option id="optLangEs" value="es">Spanish</option>
+            <option id="optLangZh" value="zh">Mandarin</option>
+            <option id="optLangEn" value="en" selected>English</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label id="verbosityLabel" for="verbosity">Format:</label>
+          <select id="verbosity">
+            <option id="optVerbVerbose" value="verbose" selected>Verbose</option>
+            <option id="optVerbConcise" value="concise">Concise</option>
+          </select>
+        </div>
+
+        <div id="chips" class="chips-container" aria-label="Quick actions">
+          <button id="chip1" class="chip">Medi-Cal website</button>
+          <button id="chip2" class="chip">CalFresh website</button>
+          <button id="chip3" class="chip">Check my eligibility</button>
+          <button id="chip4" class="chip">Help with my application</button>
+        </div>
+      </div>
+      
+      <div id="log">
+        <div id="systemMessage" class="system-message">Connecting to assistant...</div>
+      </div>
+      
+      <div id="inputArea">
+        <div class="button-row">
+          <!-- quick actions moved into the header as chips -->
+        </div>
+        <div id="inputRow">
+          <!-- Voice Mode button moved to the left of the message input -->
+          <button id="recordBtn" class="small">Voice Mode</button>
+          <input id="prompt" type="text" placeholder="Ask me anything about Medi-Cal..." />
+          <button id="send">Send</button>
+        </div>
+        <span id="recordStatus"></span>
+      </div>
+    </div>
+    <script>
+      // Translations for UI text
+      const TRANSLATIONS = {
+        en: {
+          siteTitle: 'Civic Bridge',
+          siteSubtitle: 'Your public services AI agent',
+          langLabel: 'Language:',
+          optLangAuto: 'Auto-detect',
+          optLangEs: 'Spanish',
+          optLangZh: 'Mandarin',
+          optLangEn: 'English',
+          verbosityLabel: 'Format:',
+          optVerbVerbose: 'Verbose',
+          optVerbConcise: 'Concise',
+          chip1: 'Medi-Cal website',
+          chip2: 'CalFresh website',
+          chip3: 'Check my eligibility',
+          chip4: 'Help with my application',
+          systemMessage: 'Connecting to assistant...',
+          recordBtn: 'Voice Mode',
+          promptPlaceholder: 'Ask me anything about Medi-Cal...',
+          send: 'Send'
+        },
+        es: {
+          siteTitle: 'Civic Bridge',
+          siteSubtitle: 'Agente de IA para servicios públicos',
+          langLabel: 'Idioma:',
+          optLangAuto: 'Detección automática',
+          optLangEs: 'Español',
+          optLangZh: 'Mandarín',
+          optLangEn: 'Inglés',
+          verbosityLabel: 'Formato:',
+          optVerbVerbose: 'Detallado',
+          optVerbConcise: 'Conciso',
+          chip1: 'Sitio de Medi-Cal',
+          chip2: 'Sitio de CalFresh',
+          chip3: 'Verificar mi elegibilidad',
+          chip4: 'Ayuda con mi solicitud',
+          systemMessage: 'Conectando al asistente...',
+          recordBtn: 'Modo de voz',
+          promptPlaceholder: 'Pregúntame cualquier cosa sobre Medi-Cal...',
+          send: 'Enviar'
+        },
+        zh: {
+          siteTitle: '公民桥',
+          siteSubtitle: '公共服务人工智能助手',
+          langLabel: '语言：',
+          optLangAuto: '自动检测',
+          optLangEs: '西班牙语',
+          optLangZh: '普通话',
+          optLangEn: '英语',
+          verbosityLabel: '格式：',
+          optVerbVerbose: '详细',
+          optVerbConcise: '简洁',
+          chip1: 'Medi‑Cal 网站',
+          chip2: 'CalFresh 网站',
+          chip3: '检查我的资格',
+          chip4: '帮助我的申请',
+          systemMessage: '正在连接助手...',
+          recordBtn: '语音模式',
+          promptPlaceholder: '向我询问有关 Medi‑Cal 的任何问题...',
+          send: '发送'
+        }
+      };
+
+      function applyTranslations(lang) {
+        const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
+        const set = (id, val) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          if (el.tagName === 'INPUT') {
+            el.placeholder = val;
+          } else {
+            el.textContent = val;
+          }
+        };
+        set('siteTitle', t.siteTitle);
+        set('siteSubtitle', t.siteSubtitle);
+        set('langLabel', t.langLabel);
+        set('optLangAuto', t.optLangAuto);
+        set('optLangEs', t.optLangEs);
+        set('optLangZh', t.optLangZh);
+        set('optLangEn', t.optLangEn);
+        set('verbosityLabel', t.verbosityLabel);
+        set('optVerbVerbose', t.optVerbVerbose);
+        set('optVerbConcise', t.optVerbConcise);
+        set('chip1', t.chip1);
+        set('chip2', t.chip2);
+        set('chip3', t.chip3);
+        set('chip4', t.chip4);
+        set('systemMessage', t.systemMessage);
+        set('recordBtn', t.recordBtn);
+        // input placeholder
+        const prompt = document.getElementById('prompt');
+        if (prompt) prompt.placeholder = t.promptPlaceholder;
+        set('send', t.send);
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        const langSelect = document.getElementById('lang');
+        if (langSelect) {
+          applyTranslations(langSelect.value || 'en');
+          langSelect.addEventListener('change', (e) => {
+            applyTranslations(e.target.value || 'en');
+          });
+        } else {
+          applyTranslations('en');
+        }
+      });
+      const logoEl = document.getElementById('logo');
+      const img = new Image();
+      img.onload = () => {
+        logoEl.innerHTML = '';
+        logoEl.className = '';
+        const imgTag = document.createElement('img');
+        imgTag.src = '/static/cb_logo.png';
+        imgTag.alt = 'Logo';
+        imgTag.style.width = '100%';
+        imgTag.style.height = '100%';
+        imgTag.style.objectFit = 'contain';
+        logoEl.appendChild(imgTag);
+      };
+      img.src = '/static/cb_logo.png';
+    </script>
+    <script src="/static/chat.js"></script>
+  </body>
+</html>
