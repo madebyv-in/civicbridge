@@ -1,5 +1,8 @@
 # Civic Bridge
 ![Logo](static/cb_logo.png)  
+
+Key files are provided; email vin.bhat@outlook.com for full package and installation instructions if you are interested.
+
 Civic Bridge is an innovative AI agent that helps users learn about public services like Medi-Cal & CalFresh, determine eligibility, navigate complex forms and enroll in services.  
   
 Civic Bridge is fully accessible to users who are vision-impaired, aren’t familiar with English or are confused by the process of accessing vital public services. In fact, nearly a quarter of all users aged 18-64 aren’t insured because they find the enrollment process for Medi-Cal too difficult or confusing.  
